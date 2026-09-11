@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ibm-blue: #0f62fe;
+  --ibm-gray100: #161616;
+  --ibm-gray10: #f4f4f4;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #e0e0e0;
+}
+::-webkit-scrollbar-thumb {
+  background: #6f6f6f;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #393939;
+}
+
+/* Syntax highlighter overrides */
+pre {
+  border-radius: 0 !important;
+}
