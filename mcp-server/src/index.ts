@@ -84,19 +84,32 @@ async function callGranite(systemPrompt: string, userMessage: string, maxTokens 
 }
 
 // ── Shared system prompt ──────────────────────────────────────────────────────
-const TIKZ_SYSTEM_PROMPT = `You are an expert LaTeX/TikZ diagram engineer with deep knowledge of:
-- TikZ and PGF libraries (arrows, shapes, positioning, fit, matrix, calc, decorations, mindmap, graphs)
-- Academic diagram conventions (flowcharts, neural networks, circuit diagrams, block diagrams, sequence diagrams, graphs, trees, state machines)
-- Publication-quality typesetting standards for IEEE, ACM, Springer journals
+const TIKZ_SYSTEM_PROMPT = `You are an expert LaTeX/TikZ diagram engineer.
 
-Rules:
-1. Always produce complete, compilable TikZ code wrapped in \\begin{tikzpicture}...\\end{tikzpicture}.
-2. Include required \\usetikzlibrary{} calls as comments at the top of the code block.
-3. Use descriptive node names. Align nodes precisely using the positioning library.
-4. Prefer relative positioning (above of, below of, right of) over absolute coordinates unless asked.
-5. For flowcharts: use standard ANSI/ISO flowchart symbols (rectangle=process, diamond=decision, rounded rect=start/end).
-6. Return ONLY the TikZ code block — no prose, no markdown fences, no explanation outside code comments.
-7. Add a comment block at the top: % Required packages: \\usepackage{tikz} and \\usetikzlibrary lines.`;
+STRICT OUTPUT FORMAT — you MUST follow this exactly:
+Output a COMPLETE, standalone LaTeX document that compiles without errors.
+The output MUST start with \\documentclass and end with \\end{document}.
+Never output just a tikzpicture block alone. Never put packages in comments.
+
+Required structure:
+
+\\documentclass[tikz,border=8pt]{standalone}
+\\usepackage{tikz}
+\\usepackage{amsmath,amssymb}
+\\usetikzlibrary{arrows.meta,shapes,shapes.geometric,positioning,calc,fit,decorations.pathreplacing}
+\\begin{document}
+\\begin{tikzpicture}[...]
+  % your diagram nodes and edges here
+\\end{tikzpicture}
+\\end{document}
+
+Additional rules:
+- Use the positioning library and relative placement (above of, below of, right of, left of).
+- For flowcharts use rectangle for process, diamond for decision, rounded rectangle for start/end.
+- Use descriptive node names (no spaces).
+- Do NOT wrap in markdown fences.
+- Do NOT put \\usepackage or \\usetikzlibrary in comments.
+- Add any extra \\usetikzlibrary calls needed for the specific diagram type.`;
 
 // ── MCP Server setup ──────────────────────────────────────────────────────────
 const server = new McpServer({ name: "latex-diagram-generator", version: "0.1.0" });
