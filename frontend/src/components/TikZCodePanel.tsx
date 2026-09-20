@@ -8,10 +8,11 @@ interface Props {
   tikzCode: string;
   onExplain: () => void;
   onWrap: () => void;
+  onPreview: () => void;
   isGenerating: boolean;
 }
 
-export function TikZCodePanel({ tikzCode, onExplain, onWrap, isGenerating }: Props) {
+export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenerating }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
@@ -61,6 +62,13 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, isGenerating }: Pro
           TikZ Output
         </span>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onPreview}
+            disabled={!tikzCode || isGenerating}
+            className="text-xs bg-[#0f62fe] hover:bg-[#0353e9] disabled:bg-[#2a2a2a] disabled:text-[#4a4a4a] text-white px-3 py-1 transition-colors font-mono font-semibold"
+          >
+            ▶ Preview
+          </button>
           <button
             onClick={onExplain}
             disabled={isGenerating}

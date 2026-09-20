@@ -7,6 +7,7 @@ import { TikZCodePanel } from "@/components/TikZCodePanel";
 import { ChatPanel } from "@/components/ChatPanel";
 import { TopBar } from "@/components/TopBar";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
+import { DiagramPreview } from "@/components/DiagramPreview";
 
 export type DiagramType =
   | "auto"
@@ -39,6 +40,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isRefineMode, setIsRefineMode] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -212,6 +214,12 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      {showPreview && currentTikZ && (
+        <DiagramPreview
+          tikzCode={currentTikZ}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel — controls + chat */}
@@ -292,6 +300,7 @@ export default function Home() {
             tikzCode={currentTikZ}
             onExplain={handleExplain}
             onWrap={handleWrap}
+            onPreview={() => setShowPreview(true)}
             isGenerating={isGenerating}
           />
         </div>

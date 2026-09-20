@@ -1,0 +1,26 @@
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,calc}
+\begin{document}
+
+\begin{tikzpicture}[node distance=2cm]
+    % Define nodes
+    \node (data_ingestion) [draw, rectangle, minimum width=2cm, minimum height=1cm] {Data Ingestion};
+    \node (preprocessing) [draw, rectangle, below of=data_ingestion, minimum width=2cm, minimum height=1cm] {Preprocessing};
+    \node (training) [draw, rectangle, below of=preprocessing, minimum width=2cm, minimum height=1cm] {Training};
+    \node (evaluation) [draw, rectangle, below of=training, minimum width=2cm, minimum height=1cm] {Evaluation};
+    \node (accuracy_threshold) [draw, diamond, right of=evaluation, node distance=3cm, minimum width=2cm, minimum height=1cm] {Accuracy $\geq$ Threshold?};
+    \node (model_deployment) [draw, rectangle, below of=accuracy_threshold, minimum width=2cm, minimum height=1cm] {Model Deployment};
+    \node (model_refining) [draw, rectangle, above of=accuracy_threshold, minimum width=2cm, minimum height=1cm] {Model Refining};
+
+    % Draw arrows
+    \draw[->] (data_ingestion) -- (preprocessing);
+    \draw[->] (preprocessing) -- (training);
+    \draw[->] (training) -- (evaluation);
+    \draw[->] (evaluation) -- (accuracy_threshold);
+    \draw[->] (accuracy_threshold) -- node[above] {Yes} (model_deployment);
+    \draw[->] (accuracy_threshold) -- node[above] {No} (model_refining);
+    \draw[->] (model_refining) -- (training);
+\end{tikzpicture}
+
+\end{document}
