@@ -15,8 +15,8 @@ interface Props {
 export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenerating }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
-  const [pdfStatus, setPdfStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [pdfError, setPdfError] = useState("");
+  const [texLoading, setTexLoading] = useState(false);
+  const [overleafLoading, setOverleafLoading] = useState(false);
 
   const handleCopy = async () => {
     if (!tikzCode) return;
@@ -38,38 +38,64 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenera
     setTimeout(() => setDownloaded(false), 2000);
   };
 
-  const handleDownloadPDF = async () => {
-    if (!tikzCode || pdfStatus === "loading") return;
-    setPdfStatus("loading");
-    setPdfError("");
+  // Download a complete standalone .tex file ready for pdflatex
+  const handleDownloadTex = async () => {
+    if (!tikzCode || texLoading) return;
+    setTexLoading(true);
     try {
       const res = await fetch("/api/compile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tikzCode }),
       });
-
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        setPdfError(data.error ?? "Compilation failed");
-        setPdfStatus("error");
-        setTimeout(() => setPdfStatus("idle"), 5000);
-        return;
-      }
-
-      // Trigger browser download of the returned PDF
-      const blob = await res.blob();
+      const data = (await res.json()) as { latexSource?: string; error?: string };
+      if (!data.latexSource) return;
+      const blob = new Blob([data.latexSource], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "diagram.pdf";
+      a.download = "diagram.tex";
       a.click();
       URL.revokeObjectURL(url);
-      setPdfStatus("idle");
-    } catch (err) {
-      setPdfError(err instanceof Error ? err.message : "Network error");
-      setPdfStatus("error");
-      setTimeout(() => setPdfStatus("idle"), 5000);
+    } finally {
+      setTexLoading(false);
+    }
+  };
+
+  // Open in Overleaf — submits the full .tex directly; Overleaf compiles it instantly
+  const handleOpenOverleaf = async () => {
+    if (!tikzCode || overleafLoading) return;
+    setOverleafLoading(true);
+    try {
+      const res = await fetch("/api/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tikzCode }),
+      });
+      const data = (await res.json()) as { latexSource?: string; error?: string };
+      if (!data.latexSource) return;
+
+      // Overleaf's "open in Overleaf" accepts a form POST with snip_uri or snip
+      // The simplest approach: encode as a URL and open Overleaf's /docs endpoint
+      const encoded = encodeURIComponent(data.latexSource);
+      const overleafUrl = `https://www.overleaf.com/docs?snip=${encoded}`;
+
+      // If URL is too long (>8000 chars), fall back to downloading .tex
+      if (overleafUrl.length > 8000) {
+        const blob = new Blob([data.latexSource], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "diagram.tex";
+        a.click();
+        URL.revokeObjectURL(url);
+        alert("Diagram is large — downloaded as diagram.tex. Upload it to Overleaf manually.");
+        return;
+      }
+
+      window.open(overleafUrl, "_blank");
+    } finally {
+      setOverleafLoading(false);
     }
   };
 
@@ -107,11 +133,18 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenera
             ▶ Preview
           </button>
           <button
-            onClick={handleDownloadPDF}
-            disabled={!tikzCode || pdfStatus === "loading"}
+            onClick={handleOpenOverleaf}
+            disabled={!tikzCode || overleafLoading}
             className="text-xs bg-[#24a148] hover:bg-[#1e8a3c] disabled:bg-[#2a2a2a] disabled:text-[#4a4a4a] text-white px-3 py-1 transition-colors font-mono font-semibold"
           >
-            {pdfStatus === "loading" ? "⏳ Compiling…" : "⬇ PDF"}
+            {overleafLoading ? "⏳…" : "▷ Overleaf"}
+          </button>
+          <button
+            onClick={handleDownloadTex}
+            disabled={!tikzCode || texLoading}
+            className="text-xs bg-[#6e40c9] hover:bg-[#5a32a8] disabled:bg-[#2a2a2a] disabled:text-[#4a4a4a] text-white px-3 py-1 transition-colors font-mono font-semibold"
+          >
+            {texLoading ? "⏳…" : "⬇ .tex"}
           </button>
           <button
             onClick={onExplain}
@@ -119,13 +152,6 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenera
             className="text-xs text-[#9cdcfe] hover:text-white disabled:text-[#4a4a4a] border border-[#3c3c3c] hover:border-[#6c6c6c] px-3 py-1 transition-colors font-mono"
           >
             Explain
-          </button>
-          <button
-            onClick={onWrap}
-            disabled={isGenerating}
-            className="text-xs text-[#9cdcfe] hover:text-white disabled:text-[#4a4a4a] border border-[#3c3c3c] hover:border-[#6c6c6c] px-3 py-1 transition-colors font-mono"
-          >
-            Wrap Doc
           </button>
           <button
             onClick={handleCopy}
@@ -143,15 +169,6 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenera
           </button>
         </div>
       </div>
-
-      {/* PDF error bar */}
-      {pdfStatus === "error" && (
-        <div className="bg-[#2a0a0a] border-b border-[#da1e28] px-4 py-2 text-xs text-[#fa4d56] font-mono flex items-center gap-2">
-          <span>⚠ PDF failed:</span>
-          <span className="text-[#ffb3b8] truncate">{pdfError}</span>
-          <button onClick={() => setPdfStatus("idle")} className="ml-auto text-[#fa4d56] hover:text-white">✕</button>
-        </div>
-      )}
 
       {/* Code area */}
       <div className="flex-1 overflow-auto">
