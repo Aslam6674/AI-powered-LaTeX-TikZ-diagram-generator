@@ -15,6 +15,8 @@ interface Props {
 export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenerating }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [pdfError, setPdfError] = useState("");
 
   const handleCopy = async () => {
     if (!tikzCode) return;
@@ -34,6 +36,41 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenera
     URL.revokeObjectURL(url);
     setDownloaded(true);
     setTimeout(() => setDownloaded(false), 2000);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!tikzCode || pdfStatus === "loading") return;
+    setPdfStatus("loading");
+    setPdfError("");
+    try {
+      const res = await fetch("/api/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tikzCode }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setPdfError(data.error ?? "Compilation failed");
+        setPdfStatus("error");
+        setTimeout(() => setPdfStatus("idle"), 5000);
+        return;
+      }
+
+      // Trigger browser download of the returned PDF
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "diagram.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+      setPdfStatus("idle");
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : "Network error");
+      setPdfStatus("error");
+      setTimeout(() => setPdfStatus("idle"), 5000);
+    }
   };
 
   if (!tikzCode) {
@@ -61,13 +98,20 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenera
         <span className="text-xs font-mono text-[#9cdcfe] uppercase tracking-wider font-semibold">
           TikZ Output
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onPreview}
             disabled={!tikzCode || isGenerating}
             className="text-xs bg-[#0f62fe] hover:bg-[#0353e9] disabled:bg-[#2a2a2a] disabled:text-[#4a4a4a] text-white px-3 py-1 transition-colors font-mono font-semibold"
           >
             ▶ Preview
+          </button>
+          <button
+            onClick={handleDownloadPDF}
+            disabled={!tikzCode || pdfStatus === "loading"}
+            className="text-xs bg-[#24a148] hover:bg-[#1e8a3c] disabled:bg-[#2a2a2a] disabled:text-[#4a4a4a] text-white px-3 py-1 transition-colors font-mono font-semibold"
+          >
+            {pdfStatus === "loading" ? "⏳ Compiling…" : "⬇ PDF"}
           </button>
           <button
             onClick={onExplain}
@@ -93,12 +137,21 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenera
           <button
             onClick={handleDownload}
             disabled={!tikzCode}
-            className="text-xs bg-ibm-blue text-white hover:bg-ibm-blue-hover disabled:bg-[#3a3a3a] disabled:text-[#6a6a6a] px-3 py-1 transition-colors font-mono"
+            className="text-xs text-[#9cdcfe] hover:text-white disabled:text-[#4a4a4a] border border-[#3c3c3c] hover:border-[#6c6c6c] px-3 py-1 transition-colors font-mono"
           >
-            {downloaded ? "✓ Saved" : "Download"}
+            {downloaded ? "✓ Saved" : ".tikz"}
           </button>
         </div>
       </div>
+
+      {/* PDF error bar */}
+      {pdfStatus === "error" && (
+        <div className="bg-[#2a0a0a] border-b border-[#da1e28] px-4 py-2 text-xs text-[#fa4d56] font-mono flex items-center gap-2">
+          <span>⚠ PDF failed:</span>
+          <span className="text-[#ffb3b8] truncate">{pdfError}</span>
+          <button onClick={() => setPdfStatus("idle")} className="ml-auto text-[#fa4d56] hover:text-white">✕</button>
+        </div>
+      )}
 
       {/* Code area */}
       <div className="flex-1 overflow-auto">
