@@ -8,11 +8,10 @@ interface Props {
   tikzCode: string;
   onExplain: () => void;
   onWrap: () => void;
-  onPreview: () => void;
   isGenerating: boolean;
 }
 
-export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenerating }: Props) {
+export function TikZCodePanel({ tikzCode, onExplain, onWrap, isGenerating }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [texLoading, setTexLoading] = useState(false);
@@ -125,13 +124,6 @@ export function TikZCodePanel({ tikzCode, onExplain, onWrap, onPreview, isGenera
           TikZ Output
         </span>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={onPreview}
-            disabled={!tikzCode || isGenerating}
-            className="text-xs bg-[#0f62fe] hover:bg-[#0353e9] disabled:bg-[#2a2a2a] disabled:text-[#4a4a4a] text-white px-3 py-1 transition-colors font-mono font-semibold"
-          >
-            ▶ Preview
-          </button>
           <button
             onClick={handleOpenOverleaf}
             disabled={!tikzCode || overleafLoading}
